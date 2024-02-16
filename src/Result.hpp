@@ -116,11 +116,11 @@ class Error {
  */
 
 template <typename T>
-result::Value<T> Success(T value) {
+result::Value<T> Ok(T value) {
   return result::Value<T>(value);
 }
 
 template <typename E>
-result::Error<E> Failure(E error) {
+result::Error<E> Err(E error) {
   return result::Error<E>(error);
 }

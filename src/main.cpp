@@ -8,9 +8,9 @@
 #include "Result.hpp"
 Result<int, std::string> Divide(int a, int b) {
   if (b == 0) {
-    return Failure("Division by zero");
+    return Err("Division by zero");
   }
-  return Success(a / b);
+  return Ok(a / b);
 }
 
 int main() {
