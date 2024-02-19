@@ -10,29 +10,54 @@
 template <typename OkT, typename ErrT>
 class Result {
  public:
-  Result();
+  Result() : value_(OkT()), error_(ErrT()), has_value_(false) {}
 
-  Result(OkT value, ErrT error, bool has_value);
+  Result(OkT value, ErrT error, bool has_value)
+      : value_(value), error_(error), has_value_(has_value) {}
 
-  Result(const Result &other);
+  Result(const Result &other)
+      : value_(other.value_),
+        error_(other.error_),
+        has_value_(other.has_value_) {}
 
-  Result &operator=(const Result &other);
+  Result &operator=(const Result &other) {
+    if (this == &other) {
+      return *this;
+    }
+    value_ = other.value_;
+    error_ = other.error_;
+    has_value_ = other.has_value_;
+  }
 
-  ~Result();
+  ~Result() {}
 
-  bool operator<(const Result &other) const;
+  bool operator<(const Result &other) const {
+    if (has_value_) {
+      return value_ < other.value_;
+    } else {
+      return error_ < other.error_;
+    }
+  }
 
   // Errに対してUnwrapを呼ぶと例外を投げる
-  // IsOkかIsErrで値の有無を確認してから呼び出す
-  OkT Unwrap() const;
+  OkT Unwrap() const {
+    if (!IsOk()) {
+      throw std::runtime_error("Result does not have a value");
+    }
+    return value_;
+  }
 
   // Okに対してUnwrapErrを呼ぶと例外を投げる
-  // IsOkかIsErrで値の有無を確認してから呼び出す
-  ErrT UnwrapErr() const;
+  ErrT UnwrapErr() const {
+    if (!IsErr()) {
+      throw std::runtime_error("Result does not have an error");
+    }
+    return error_;
+  }
 
-  bool IsOk() const;
+  bool IsOk() const { return has_value_; }
 
-  bool IsErr() const;
+  bool IsErr() const { return !has_value_; }
 
  private:
   OkT value_;
@@ -50,16 +75,23 @@ namespace details {
 template <typename T>
 class Value {
  public:
-  explicit Value(T value) : value_(value);
+  explicit Value(T value) : value_(value) {}
 
-  Value(const Value &other);
+  Value(const Value &other) : value_(other.value_) {}
 
-  Value &operator=(const Value &other);
+  Value &operator=(const Value &other) {
+    if (this == &other) {
+      return *this;
+    }
+    value_ = other.value_;
+  }
 
-  ~Value();
+  ~Value() {}
 
   template <typename U, typename F>
-  operator Result<U, F>() const;
+  operator Result<U, F>() const {
+    return Result<U, F>(value_, F(), /* has_value= */ true);
+  }
 
  private:
   T value_;
@@ -68,16 +100,25 @@ class Value {
 template <typename E>
 class Error {
  public:
-  explicit Error(E error);
+  explicit Error(E error) : error_(error) {}
 
-  Error(const Error &other);
+  Error(const Error &other) : error_(other.error_) {}
 
-  Error &operator=(const Error &other);
+  Error &operator=(const Error &other) {
+    if (this == &other) {
+      return *this;
+    }
+    error_ = other.error_;
+  }
 
-  ~Error();
+  ~Error() {}
 
   template <typename U, typename F>
-  operator Result<U, F>() const;
+  operator Result<U, F>() const {
+    return Result<U, F>(U(), error_, /* has_value= */ false);
+  }
+
+  E error() const { return error_; }
 
  private:
   E error_;
@@ -100,128 +141,3 @@ template <typename E>
 details::Error<E> Err(E error) {
   return details::Error<E>(error);
 }
-
-/*
- * Resultクラスの実装
- */
-
-template <typename OkT, typename ErrT>
-Result<OkT, ErrT>::Result()
-    : value_(OkT()), error_(ErrT()), has_value_(false) {}
-
-template <typename OkT, typename ErrT>
-Result<OkT, ErrT>::Result(OkT value, ErrT error, bool has_value)
-    : value_(value), error_(error), has_value_(has_value) {}
-
-template <typename OkT, typename ErrT>
-Result<OkT, ErrT>::Result(const Result &other)
-    : value_(other.value_),
-      error_(other.error_),
-      has_value_(other.has_value_) {}
-
-template <typename OkT, typename ErrT>
-Result<OkT, ErrT> &Result<OkT, ErrT>::operator=(const Result &other) {
-  if (this == &other) {
-    return *this;
-  }
-
-  value_ = other.value_;
-  error_ = other.error_;
-  has_value_ = other.has_value_;
-}
-
-template <typename OkT, typename ErrT>
-Result<OkT, ErrT>::~Result() {}
-
-template <typename OkT, typename ErrT>
-bool Result<OkT, ErrT>::operator<(const Result &other) const {
-  if (has_value_) {
-    return value_ < other.value_;
-  } else {
-    return error_ < other.error_;
-  }
-}
-
-template <typename OkT, typename ErrT>
-OkT Result<OkT, ErrT>::Unwrap() const {
-  if (!IsOk()) {
-    throw std::runtime_error("Result does not have a value");
-  }
-  return value_;
-}
-
-template <typename OkT, typename ErrT>
-ErrT Result<OkT, ErrT>::UnwrapErr() const {
-  if (!IsErr()) {
-    throw std::runtime_error("Result does not have an error");
-  }
-  return error_;
-}
-
-template <typename OkT, typename ErrT>
-bool Result<OkT, ErrT>::IsOk() const {
-  return has_value_;
-}
-
-template <typename OkT, typename ErrT>
-bool Result<OkT, ErrT>::IsErr() const {
-  return !has_value_;
-}
-
-namespace details {
-
-/*
- * Valueクラスの実装
- */
-
-template <typename T>
-Value<T>::Value(T value) : value_(value) {}
-
-template <typename T>
-Value<T>::Value(const Value &other) : value_(other.value_) {}
-
-template <typename T>
-Value<T> &Value<T>::operator=(const Value &other) {
-  if (this == &other) {
-    return *this;
-  }
-  value_ = other.value_;
-}
-
-template <typename T>
-Value<T>::~Value() {}
-
-template <typename T>
-template <typename U, typename F>
-Value<T>::operator Result<U, F>() const {
-  return Result<U, F>(value_, F(), /* has_value= */ true);
-}
-
-/*
- * Errorクラスの実装
- */
-
-template <typename E>
-Error<E>::Error(E error) : error_(error) {}
-
-template <typename E>
-Error<E>::Error(const Error &other) : error_(other.error_) {}
-
-template <typename E>
-Error<E> &Error<E>::operator=(const Error &other) {
-  if (this == &other) {
-    return *this;
-  }
-  error_ = other.error_;
-}
-
-template <typename E>
-Error<E>::~Error() {}
-
-template <typename E>
-template <typename U, typename F>
-Error<E>::operator Result<U, F>() const {
-  return Result<U, F>(U(), error_, /* has_value= */ false);
-}
-
-}  // namespace details
