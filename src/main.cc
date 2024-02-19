@@ -5,7 +5,8 @@
 #include <iostream>
 #include <string>
 
-#include "Result.hpp"
+#include "result.h"
+
 Result<int, std::string> Divide(int a, int b) {
   if (b == 0) {
     return Err("Division by zero");
